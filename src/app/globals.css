@@ -1,0 +1,95 @@
+@import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.17.0/dist/tabler-icons.min.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+    --font-ui:      'Inter Tight', system-ui, sans-serif;
+    --r-xs: 8px;  --r-sm: 12px; --r-md: 16px;
+    --r-lg: 22px; --r-xl: 28px; --r-pill: 999px;
+    --shadow-1: 0 1px 0 rgba(20,40,30,0.04), 0 1px 2px rgba(20,40,30,0.04);
+    --shadow-2: 0 2px 4px rgba(20,40,30,0.05), 0 12px 24px -8px rgba(20,40,30,0.08);
+    --shadow-3: 0 12px 32px -8px rgba(20,40,30,0.18), 0 4px 12px -4px rgba(20,40,30,0.10);
+    --c-success: #1F8A5B; --c-success-soft: #DFF1E7;
+    --c-danger:  #B23B2E; --c-danger-soft:  #F7E2DD;
+    --c-warning: #B07408; --c-warning-soft: #F5E8C9;
+  }
+
+  :root, [data-palette="forest"] {
+    --c-bg:        #F5F2EA; --c-bg-elev:   #FFFFFF; --c-card:      #FFFFFF;
+    --c-ink:       #0E1F17; --c-ink-2:     #1F2F26; --c-muted:     #6E7C75;
+    --c-faint:     #98A39C; --c-border:    #E6E0D3; --c-border-2:  #EFE9DC;
+    --c-brand:     #11402F; --c-brand-2:   #1B5A43; --c-brand-fg:  #ECF4EF;
+    --c-brand-soft:#E2EDE6; --c-on-brand:  #F1EBDB;
+  }
+  [data-palette="forest"][data-mode="dark"] {
+    --c-bg:        #0C100E; --c-bg-elev:   #131915; --c-card:      #161D19;
+    --c-ink:       #F1ECE0; --c-ink-2:     #DCD8CC; --c-muted:     #8A9690;
+    --c-faint:     #6A7670; --c-border:    #232B27; --c-border-2:  #1C2420;
+    --c-brand:     #7CD2A4; --c-brand-2:   #5DBE8C; --c-brand-fg:  #0A1A12;
+    --c-brand-soft:#1A2922; --c-on-brand:  #0A1A12;
+    --c-success-soft: #1A2922; --c-danger-soft: #2A1A16; --c-warning-soft: #2A220F;
+  }
+  [data-palette="indigo"] {
+    --c-bg:        #F4F3F8; --c-bg-elev:   #FFFFFF; --c-card:      #FFFFFF;
+    --c-ink:       #15132A; --c-ink-2:     #23213A; --c-muted:     #6D6D85;
+    --c-faint:     #95959F; --c-border:    #E4E2EE; --c-border-2:  #EEEDF5;
+    --c-brand:     #1E2369; --c-brand-2:   #2E3699; --c-brand-fg:  #EAEBF5;
+    --c-brand-soft:#E1E3F1; --c-on-brand:  #EEE8DB;
+  }
+  [data-palette="indigo"][data-mode="dark"] {
+    --c-bg:        #0B0C16; --c-bg-elev:   #12141F; --c-card:      #161826;
+    --c-ink:       #EFEEF8; --c-ink-2:     #D6D5E2; --c-muted:     #8A8AA0;
+    --c-faint:     #6A6A82; --c-border:    #232540; --c-border-2:  #1A1C2E;
+    --c-brand:     #A8B0FF; --c-brand-2:   #8B92EE; --c-brand-fg:  #0E0F1C;
+    --c-brand-soft:#1B1E36; --c-on-brand:  #0E0F1C;
+  }
+  [data-palette="onyx"] {
+    --c-bg:        #F2F2F1; --c-bg-elev:   #FFFFFF; --c-card:      #FFFFFF;
+    --c-ink:       #0A0A0A; --c-ink-2:     #1F1F1F; --c-muted:     #6B6B6B;
+    --c-faint:     #9A9A9A; --c-border:    #E5E5E3; --c-border-2:  #EDEDEB;
+    --c-brand:     #0A0A0A; --c-brand-2:   #2A2A2A; --c-brand-fg:  #F2F2F1;
+    --c-brand-soft:#E5E5E3; --c-on-brand:  #D9F25A;
+  }
+  [data-palette="onyx"][data-mode="dark"] {
+    --c-bg:        #0A0A0A; --c-bg-elev:   #131313; --c-card:      #181818;
+    --c-ink:       #F2F2F1; --c-ink-2:     #D8D8D6; --c-muted:     #8A8A8A;
+    --c-faint:     #5C5C5C; --c-border:    #232323; --c-border-2:  #1B1B1B;
+    --c-brand:     #D9F25A; --c-brand-2:   #BFD846; --c-brand-fg:  #0A0A0A;
+    --c-brand-soft:#1F2208; --c-on-brand:  #0A0A0A;
+  }
+
+  body { background: var(--c-bg); color: var(--c-ink); font-family: var(--font-ui); }
+  * { border-color: var(--c-border); }
+
+  .num {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.035em;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  .press { transition: transform .12s ease; }
+  .press:active { transform: scale(0.97); }
+
+  @keyframes ff-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .ff-enter { animation: ff-fade .28s cubic-bezier(.2,.7,.2,1) both; }
+
+  @keyframes ff-row { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+  .ff-row { animation: ff-row .32s cubic-bezier(.2,.7,.2,1) both; }
+
+  @keyframes ff-fill { from { width: 0; } }
+  .ff-fill { animation: ff-fill .9s cubic-bezier(.2,.7,.2,1) both; }
+
+  @keyframes ff-sheet { from { transform: translateY(100%); } to { transform: none; } }
+  .ff-sheet { animation: ff-sheet .36s cubic-bezier(.2,.7,.2,1) both; }
+
+  @keyframes ff-backdrop { from { opacity: 0; } to { opacity: 1; } }
+  .ff-backdrop { animation: ff-backdrop .24s ease both; }
+}
