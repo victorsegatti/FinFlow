@@ -78,17 +78,26 @@ export default function EditarContaPage() {
 
     const futureDates = buildFutureRecurringDates(vencimento, 11);
 
-    // Buscar duplicatas existentes (mesmo description+amount+type+due_date)
+    // Buscar contas que já existem nos meses futuros (mesmo tipo + due_date).
+    // Match menos estrito (sem description/amount) porque valor/descrição podem ter mudado.
     const { data: existing } = await supabase
       .from('bills')
-      .select('due_date')
+      .select('due_date, description')
       .eq('user_id', user.id)
-      .eq('description', desc)
-      .eq('amount', cents / 100)
       .eq('type', tipo)
       .in('due_date', futureDates);
 
-    const existingDates = new Set((existing || []).map((b: any) => b.due_date));
+    // Considera duplicata se o description bate (case insensitive) OU se já existe alguma conta do mesmo tipo nesse dia.
+    // Usa "começa com" pra ser tolerante a pequenas variações tipo "Salário" vs "Salário Empresa X".
+    const descLower = desc.toLowerCase().trim();
+    const existingDates = new Set(
+      (existing || [])
+        .filter((b: any) => {
+          const bd = (b.description || '').toLowerCase().trim();
+          return bd === descLower || bd.includes(descLower) || descLower.includes(bd);
+        })
+        .map((b: any) => b.due_date),
+    );
     const datesToCreate = futureDates.filter((d) => !existingDates.has(d));
 
     if (datesToCreate.length === 0) {
