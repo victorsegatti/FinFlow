@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 
-export const MODEL = 'claude-opus-4-7';
+export const MODEL = 'claude-sonnet-4-6';
 
 export function getClient() {
   const key = process.env.ANTHROPIC_API_KEY;
