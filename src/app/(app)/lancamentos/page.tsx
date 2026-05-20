@@ -57,11 +57,17 @@ export default function LancamentosPage() {
 
   return (
     <>
-      <div className="ff-enter mb-5">
-        <h1 className="text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}>
-          Lançamentos
-        </h1>
-        <p className="text-xs text-muted mt-0.5">Histórico completo</p>
+      <div className="ff-enter flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}>
+            Lançamentos
+          </h1>
+          <p className="text-xs text-muted mt-0.5">Histórico completo</p>
+        </div>
+        <Link href="/importar"
+              className="press shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-pill text-xs font-medium border border-border bg-card text-ink-2">
+          <i className="ti ti-upload text-sm" /> Importar
+        </Link>
       </div>
 
       <div className="relative mb-3">
