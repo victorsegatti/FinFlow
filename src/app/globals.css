@@ -93,6 +93,16 @@
   @keyframes ff-backdrop { from { opacity: 0; } to { opacity: 1; } }
   .ff-backdrop { animation: ff-backdrop .24s ease both; }
 
+  @keyframes ff-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, var(--c-card) 0%, var(--c-border-2) 50%, var(--c-card) 100%);
+    background-size: 200% 100%;
+    animation: ff-shimmer 1.4s ease-in-out infinite;
+  }
+
   .ai-md p { margin: 0 0 0.5em; }
   .ai-md p:last-child { margin-bottom: 0; }
   .ai-md strong { font-weight: 600; color: var(--c-ink); }
