@@ -5,12 +5,15 @@ import { createClient } from '@/lib/supabase/client';
 import { Bill } from '@/types/database';
 import { fmtBRL, fmtDate, cn } from '@/lib/format';
 import { MetricCard } from '@/components/metric-card';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 export default function ContasPage() {
   const supabase = createClient();
   const [bills, setBills] = useState<Bill[]>([]);
   const [tab, setTab] = useState<'pagar' | 'receber'>('pagar');
   const [loading, setLoading] = useState(true);
+  const [undoTarget, setUndoTarget] = useState<Bill | null>(null);
+  const [undoing, setUndoing] = useState(false);
 
   async function load() {
     const { data } = await supabase.from('bills').select('*').order('due_date');
@@ -37,6 +40,38 @@ export default function ContasPage() {
         is_recurring: bill.is_recurring,
       }),
     ]);
+    load();
+  }
+
+  async function markUnpaid() {
+    if (!undoTarget) return;
+    setUndoing(true);
+    const b = undoTarget;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setUndoing(false); return; }
+
+    const today = new Date().toISOString().split('T')[0];
+    const newStatus = b.due_date < today ? 'late' : 'pending';
+
+    // Try to find and remove the matching transaction (created when bill was paid)
+    const paidDate = b.paid_at ? b.paid_at.split('T')[0] : today;
+    const txType = b.type === 'pagar' ? 'despesa' : 'receita';
+    const { data: matches } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('description', b.description)
+      .eq('amount', b.amount)
+      .eq('type', txType)
+      .eq('date', paidDate)
+      .limit(2);
+
+    if (matches && matches.length === 1) {
+      await supabase.from('transactions').delete().eq('id', (matches[0] as any).id);
+    }
+    await supabase.from('bills').update({ status: newStatus, paid_at: null }).eq('id', b.id);
+    setUndoing(false);
+    setUndoTarget(null);
     load();
   }
 
@@ -107,15 +142,29 @@ export default function ContasPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {list.map((b) => (
-            <BillRow key={b.id} bill={b} tab={tab} onPay={() => markPaid(b.id)} />
+            <BillRow key={b.id} bill={b} tab={tab}
+                     onPay={() => markPaid(b.id)}
+                     onUndo={() => setUndoTarget(b)} />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!undoTarget}
+        title="Desfazer pagamento?"
+        message={undoTarget
+          ? `A conta "${undoTarget.description}" volta a ficar em aberto e o lançamento correspondente será removido (se houver).`
+          : ''}
+        confirmLabel="Desfazer"
+        loading={undoing}
+        onConfirm={markUnpaid}
+        onCancel={() => setUndoTarget(null)}
+      />
     </>
   );
 }
 
-function BillRow({ bill: b, tab, onPay }: { bill: Bill; tab: 'pagar' | 'receber'; onPay: () => void }) {
+function BillRow({ bill: b, tab, onPay, onUndo }: { bill: Bill; tab: 'pagar' | 'receber'; onPay: () => void; onUndo: () => void }) {
   const isLate = b.status === 'late';
   const isPaid = b.status === 'paid';
 
@@ -152,8 +201,16 @@ function BillRow({ bill: b, tab, onPay }: { bill: Bill; tab: 'pagar' | 'receber'
           {fmtBRL(Number(b.amount))} · {tab === 'pagar' ? 'pagar' : 'receber'}
         </button>
       ) : (
-        <div className="num text-[13px] font-semibold text-ink shrink-0" style={{ letterSpacing: '-0.02em' }}>
-          {fmtBRL(Number(b.amount))}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="num text-[13px] font-semibold text-ink" style={{ letterSpacing: '-0.02em' }}>
+            {fmtBRL(Number(b.amount))}
+          </div>
+          <button onClick={onUndo}
+                  aria-label="Desfazer pagamento"
+                  className="press w-7 h-7 rounded-full grid place-items-center border-none cursor-pointer"
+                  style={{ background: 'var(--c-border-2)', color: 'var(--c-muted)' }}>
+            <i className="ti ti-rotate-2 text-xs" />
+          </button>
         </div>
       )}
     </div>
