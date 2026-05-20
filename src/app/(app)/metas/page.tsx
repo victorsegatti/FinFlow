@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Goal, Transaction } from '@/types/database';
 import { fmtBRL, cn } from '@/lib/format';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { SuggestBudgets } from '@/components/suggest-budgets';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,8 @@ export default async function MetasPage() {
         </h1>
         <p className="text-xs text-muted mt-0.5">Orçamentos e poupança</p>
       </div>
+
+      <SuggestBudgets />
 
       <div className="text-[11px] text-muted font-medium uppercase tracking-wider mb-2 px-0.5">Orçamentos do mês</div>
       {budgets.length === 0 ? (

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { TxRow } from '@/components/tx-row';
 import { MetricCard, BigBalanceCard } from '@/components/metric-card';
 import { TopHeader } from '@/components/top-header';
+import { AIInsightCard } from '@/components/ai-insight-card';
 import { Transaction, Bill } from '@/types/database';
 import Link from 'next/link';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
@@ -57,6 +58,8 @@ export default async function DashboardPage() {
       <TopHeader title={`Olá, ${firstName}`} subtitle={subtitle} />
 
       <BigBalanceCard value={saldo} deltaPct={deltaPct} />
+
+      <AIInsightCard />
 
       {/* metric cards */}
       <div className="grid grid-cols-2 gap-2.5 mt-3.5">
