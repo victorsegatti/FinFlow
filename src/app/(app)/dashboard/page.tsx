@@ -4,6 +4,7 @@ import { MetricCard, BigBalanceCard } from '@/components/metric-card';
 import { TopHeader } from '@/components/top-header';
 import { AIInsightCard } from '@/components/ai-insight-card';
 import { PrevistoRealizado } from '@/components/previsto-realizado';
+import { MonthSwitcher } from '@/components/month-switcher';
 import { Transaction, Bill } from '@/types/database';
 import Link from 'next/link';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
@@ -11,11 +12,23 @@ import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { month?: string };
+}) {
   const supabase = createClient();
   const now = new Date();
-  const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
-  const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
+
+  // Parse ?month=yyyy-MM, fallback to current month
+  let viewMonth = now;
+  if (searchParams.month && /^\d{4}-\d{2}$/.test(searchParams.month)) {
+    const [y, m] = searchParams.month.split('-').map(Number);
+    viewMonth = new Date(y, m - 1, 1);
+  }
+  const monthStart = format(startOfMonth(viewMonth), 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(viewMonth), 'yyyy-MM-dd');
+  const isCurrentMonth = format(viewMonth, 'yyyy-MM') === format(now, 'yyyy-MM');
 
   const [{ data: { user } }, { data: txs }, { data: bills }, { data: monthBills }] = await Promise.all([
     supabase.auth.getUser(),
@@ -61,15 +74,19 @@ export default async function DashboardPage() {
 
   const recent = transactions.slice(0, 10);
 
-  const subtitle = format(now, "EEEE, dd 'de' MMMM", { locale: ptBR });
+  const subtitle = isCurrentMonth
+    ? format(now, "EEEE, dd 'de' MMMM", { locale: ptBR })
+    : format(viewMonth, "MMMM 'de' yyyy", { locale: ptBR });
 
   return (
     <div style={{ padding: '8px 0 140px' }}>
       <TopHeader title={`Olá, ${firstName}`} subtitle={subtitle} />
 
+      <MonthSwitcher month={viewMonth} />
+
       <BigBalanceCard value={saldo} deltaPct={deltaPct} />
 
-      <AIInsightCard />
+      {isCurrentMonth && <AIInsightCard />}
 
       <PrevistoRealizado despPrev={despPrev} despReal={despesas} recPrev={recPrev} recReal={receitas} />
 
