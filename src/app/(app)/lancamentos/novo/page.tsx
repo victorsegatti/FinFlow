@@ -6,6 +6,7 @@ import { Category } from '@/types/database';
 import { cn } from '@/lib/format';
 import { format } from 'date-fns';
 import { CurrencyInput } from '@/components/currency-input';
+import { buildRecurringDates } from '@/lib/recurrence';
 
 export default function NovoLancamentoPage() {
   const router = useRouter();
@@ -32,15 +33,17 @@ export default function NovoLancamentoPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const { error } = await supabase.from('transactions').insert({
+    const dates = recur ? buildRecurringDates(data) : [data];
+    const records = dates.map((d) => ({
       user_id: user.id,
       description: desc,
       amount: cents / 100,
       type: tipo,
-      date: data,
+      date: d,
       category_id: catId || null,
       is_recurring: recur,
-    });
+    }));
+    const { error } = await supabase.from('transactions').insert(records);
 
     setSaving(false);
     if (error) return alert(error.message);

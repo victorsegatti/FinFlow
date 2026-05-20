@@ -44,17 +44,76 @@ export function ChatBubble() {
       }
       const reader = r.body.getReader();
       const decoder = new TextDecoder();
+      let buf = '';
       let acc = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
+      // Track placeholder positions of pending tool actions by tool id
+      const pending: Record<string, { name: string; input: any; placeholder: string }> = {};
+
+      const fmtBRL = (n: number) =>
+        typeof n === 'number'
+          ? `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : '';
+
+      const labelForTool = (name: string, input: any) => {
+        if (name === 'create_transaction') {
+          return `Criando lançamento "${input?.description ?? ''}" ${fmtBRL(input?.amount)}…`;
+        }
+        if (name === 'create_bill') {
+          return `Criando conta "${input?.description ?? ''}" ${fmtBRL(input?.amount)} (vence ${input?.due_date ?? ''})…`;
+        }
+        if (name === 'create_goal') {
+          return `Criando meta "${input?.name ?? ''}" ${fmtBRL(input?.target_amount)}…`;
+        }
+        return `Executando ${name}…`;
+      };
+
+      const flush = () => {
         setMessages((m) => {
           const copy = [...m];
           copy[copy.length - 1] = { role: 'assistant', content: acc };
           return copy;
         });
+      };
+
+      const handleLine = (line: string) => {
+        if (!line.trim()) return;
+        let evt: any;
+        try { evt = JSON.parse(line); } catch { return; }
+        if (evt.t === 'text') {
+          acc += evt.v || '';
+        } else if (evt.t === 'tool_start') {
+          const placeholder = `\n\n> ➤ ${labelForTool(evt.name, evt.input)}\n\n`;
+          pending[evt.id] = { name: evt.name, input: evt.input, placeholder };
+          acc += placeholder;
+        } else if (evt.t === 'tool_result') {
+          const p = pending[evt.id];
+          const marker = evt.ok ? '✓' : '✗';
+          const resolved = `\n\n> ${marker} ${evt.summary || (evt.ok ? 'ok' : 'erro')}\n\n`;
+          if (p && acc.includes(p.placeholder)) {
+            acc = acc.replace(p.placeholder, resolved);
+          } else {
+            acc += resolved;
+          }
+          delete pending[evt.id];
+        } else if (evt.t === 'end') {
+          // no-op
+        }
+        flush();
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, idx);
+          buf = buf.slice(idx + 1);
+          handleLine(line);
+        }
       }
+      // flush remaining buffered line, if any
+      if (buf.trim()) handleLine(buf);
     } catch (e: any) {
       setMessages((m) => {
         const copy = [...m];
@@ -99,8 +158,8 @@ export function ChatBubble() {
                   <i className="ti ti-sparkles text-base" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Assistente</div>
-                  <div className="text-[10px] text-muted">Sabe seus dados do FinFlow</div>
+                  <div className="text-sm font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>FinAI</div>
+                  <div className="text-[10px] text-muted">Pergunte, crie e analise</div>
                 </div>
               </div>
               <button onClick={() => setOpen(false)}

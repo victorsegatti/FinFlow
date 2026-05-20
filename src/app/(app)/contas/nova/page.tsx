@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Category } from '@/types/database';
 import { format } from 'date-fns';
 import { CurrencyInput } from '@/components/currency-input';
+import { buildRecurringDates } from '@/lib/recurrence';
 
 export default function NovaContaPage() {
   const router = useRouter();
@@ -30,16 +31,18 @@ export default function NovaContaPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const { error } = await supabase.from('bills').insert({
+    const dates = recur ? buildRecurringDates(vencimento) : [vencimento];
+    const records = dates.map((d) => ({
       user_id: user.id,
       description: desc,
       amount: cents / 100,
       type: tipo,
-      due_date: vencimento,
+      due_date: d,
       category_id: catId || null,
       is_recurring: recur,
-      status: 'pending',
-    });
+      status: 'pending' as const,
+    }));
+    const { error } = await supabase.from('bills').insert(records);
 
     setSaving(false);
     if (error) return alert(error.message);
