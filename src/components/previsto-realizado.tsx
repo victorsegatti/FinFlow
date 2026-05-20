@@ -7,11 +7,36 @@ export function PrevistoRealizado({
 }) {
   if (despPrev === 0 && recPrev === 0) return null;
 
+  const saldoPrev = recPrev - despPrev;
+  const saldoReal = recReal - despReal;
+  const saldoDiff = saldoReal - saldoPrev;
+
   return (
     <div className="ff-enter mt-4 bg-card border border-border rounded-md p-4">
       <div className="text-[10px] uppercase tracking-wider font-medium text-muted mb-3">
         Previsto vs realizado
       </div>
+
+      <div className="mb-4 pb-4 border-b border-border-2">
+        <div className="flex items-baseline justify-between mb-1">
+          <span className="text-sm font-medium text-ink">Saldo previsto</span>
+          <span className="num text-base font-semibold"
+                style={{ color: saldoPrev >= 0 ? 'var(--c-success)' : 'var(--c-danger)', letterSpacing: '-0.02em' }}>
+            {saldoPrev >= 0 ? '+' : '−'}{fmtBRL(Math.abs(saldoPrev))}
+          </span>
+        </div>
+        <div className="flex items-baseline justify-between text-[11px]">
+          <span className="text-muted num">
+            Realizado: <span style={{ color: saldoReal >= 0 ? 'var(--c-success)' : 'var(--c-danger)', fontWeight: 600 }}>
+              {saldoReal >= 0 ? '+' : '−'}{fmtBRL(Math.abs(saldoReal))}
+            </span>
+          </span>
+          <span className={`num font-medium ${saldoDiff >= 0 ? 'text-success' : 'text-danger'}`}>
+            {saldoDiff >= 0 ? '+' : '−'}{fmtBRL(Math.abs(saldoDiff))} vs. previsto
+          </span>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-4">
         {despPrev > 0 && (
           <Row label="Despesas" prev={despPrev} real={despReal} tone="danger" />
