@@ -9,6 +9,7 @@ import { MetricCard } from '@/components/metric-card';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 
 export default function ContasPage() {
+  const router = useRouter();
   const supabase = createClient();
   const [bills, setBills] = useState<Bill[]>([]);
   const [tab, setTab] = useState<'pagar' | 'receber'>('pagar');
@@ -42,6 +43,7 @@ export default function ContasPage() {
       }),
     ]);
     load();
+    router.refresh();
   }
 
   async function markUnpaid() {
@@ -74,6 +76,7 @@ export default function ContasPage() {
     setUndoing(false);
     setUndoTarget(null);
     load();
+    router.refresh();
   }
 
   const list = bills.filter((b) => b.type === tab);
