@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Category, Bill } from '@/types/database';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CurrencyInput } from '@/components/currency-input';
+import { buildFutureRecurringDates } from '@/lib/recurrence';
 
 export default function EditarContaPage() {
   const router = useRouter();
@@ -22,6 +23,8 @@ export default function EditarContaPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [replicating, setReplicating] = useState(false);
+  const [replicatedMsg, setReplicatedMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -64,6 +67,55 @@ export default function EditarContaPage() {
     setSaving(false);
     if (error) return alert(error.message);
     router.push('/contas');
+    router.refresh();
+  }
+
+  async function handleReplicate() {
+    setReplicating(true);
+    setReplicatedMsg(null);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setReplicating(false); return; }
+
+    const futureDates = buildFutureRecurringDates(vencimento, 11);
+
+    // Buscar duplicatas existentes (mesmo description+amount+type+due_date)
+    const { data: existing } = await supabase
+      .from('bills')
+      .select('due_date')
+      .eq('user_id', user.id)
+      .eq('description', desc)
+      .eq('amount', cents / 100)
+      .eq('type', tipo)
+      .in('due_date', futureDates);
+
+    const existingDates = new Set((existing || []).map((b: any) => b.due_date));
+    const datesToCreate = futureDates.filter((d) => !existingDates.has(d));
+
+    if (datesToCreate.length === 0) {
+      setReplicatedMsg('Já existem cópias em todos os próximos meses.');
+      setReplicating(false);
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const rows = datesToCreate.map((d) => ({
+      user_id: user.id,
+      description: desc,
+      amount: cents / 100,
+      type: tipo,
+      due_date: d,
+      category_id: catId || null,
+      is_recurring: true,
+      status: (d < today ? 'late' : 'pending') as 'pending' | 'late',
+    }));
+
+    const { error } = await supabase.from('bills').insert(rows);
+    setReplicating(false);
+    if (error) {
+      setReplicatedMsg(`Erro: ${error.message}`);
+      return;
+    }
+    setReplicatedMsg(`${rows.length} cópia${rows.length === 1 ? '' : 's'} criada${rows.length === 1 ? '' : 's'} pelos próximos meses.`);
     router.refresh();
   }
 
@@ -162,6 +214,22 @@ export default function EditarContaPage() {
             <input type="checkbox" checked={recur} onChange={(e) => setRecur(e.target.checked)} />
             <span>Recorrente (todo mês)</span>
           </label>
+
+          {recur && status !== 'paid' && (
+            <div className="mt-2 p-3 rounded-md border" style={{ background: 'var(--c-brand-soft)', borderColor: 'var(--c-brand-soft)' }}>
+              <p className="text-[11px] leading-relaxed mb-2" style={{ color: 'var(--c-brand)' }}>
+                Crie cópias dessa conta nos próximos 11 meses (mesmo dia do mês).
+              </p>
+              <button type="button" onClick={handleReplicate} disabled={replicating}
+                      className="press w-full py-2 rounded-pill text-xs font-semibold border-none cursor-pointer disabled:opacity-40"
+                      style={{ background: 'var(--c-brand)', color: 'var(--c-brand-fg)' }}>
+                <i className="ti ti-copy" /> {replicating ? 'Replicando…' : 'Replicar pelos próximos 11 meses'}
+              </button>
+              {replicatedMsg && (
+                <p className="text-[11px] mt-2" style={{ color: 'var(--c-ink-2)' }}>{replicatedMsg}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {status !== 'paid' && (
