@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Category, Bill } from '@/types/database';
-import { parseBRLInput } from '@/lib/format';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CurrencyInput } from '@/components/currency-input';
 
 export default function EditarContaPage() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function EditarContaPage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [tipo, setTipo] = useState<'pagar' | 'receber'>('pagar');
   const [desc, setDesc] = useState('');
-  const [valor, setValor] = useState('');
+  const [cents, setCents] = useState(0);
   const [vencimento, setVencimento] = useState('');
   const [catId, setCatId] = useState('');
   const [recur, setRecur] = useState(false);
@@ -33,7 +33,7 @@ export default function EditarContaPage() {
         const bill = b as Bill;
         setTipo(bill.type as 'pagar' | 'receber');
         setDesc(bill.description);
-        setValor(String(Number(bill.amount).toFixed(2)).replace('.', ','));
+        setCents(Math.round(Number(bill.amount) * 100));
         setVencimento(bill.due_date);
         setCatId(bill.category_id || '');
         setRecur(!!bill.is_recurring);
@@ -45,19 +45,16 @@ export default function EditarContaPage() {
   }, [params.id]);
 
   async function handleSave() {
-    if (!desc || !valor) return;
+    if (status === 'paid') return; // bloqueado
+    if (!desc || cents === 0) return;
     setSaving(true);
 
-    // Recalcular status caso a data de vencimento tenha mudado (sem alterar 'paid')
     const today = new Date().toISOString().split('T')[0];
-    let newStatus = status;
-    if (status !== 'paid') {
-      newStatus = vencimento < today ? 'late' : 'pending';
-    }
+    const newStatus = vencimento < today ? 'late' : 'pending';
 
     const { error } = await supabase.from('bills').update({
       description: desc,
-      amount: parseBRLInput(valor),
+      amount: cents / 100,
       type: tipo,
       due_date: vencimento,
       category_id: catId || null,
@@ -102,75 +99,79 @@ export default function EditarContaPage() {
       </div>
 
       {status === 'paid' && (
-        <div className="mb-4 p-3 rounded-md text-xs"
+        <div className="mb-4 p-3 rounded-md text-xs flex items-start gap-2"
              style={{ background: 'var(--c-success-soft)', color: 'var(--c-success)' }}>
-          Essa conta está marcada como paga. Pra desfazer, volte e use o botão ↺ na lista.
+          <i className="ti ti-lock text-base shrink-0 mt-0.5" />
+          <span>Conta paga não pode ser editada. Pra alterar, desfaça o pagamento (botão ↺ na lista) e volte aqui.</span>
         </div>
       )}
 
-      <div className="relative grid grid-cols-2 bg-border-2 rounded-pill p-1 mb-5">
-        <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-pill bg-bg-elev shadow-1 transition-all duration-300"
-             style={{ left: tipo === 'pagar' ? 4 : 'calc(50%)' }} />
-        {([['pagar', 'A pagar', 'ti-arrow-up-right'], ['receber', 'A receber', 'ti-arrow-down-right']] as const).map(([t, label, icon]) => (
-          <button key={t} onClick={() => setTipo(t)}
-                  className="relative z-10 h-9 border-none bg-transparent cursor-pointer flex items-center justify-center gap-1.5 text-sm font-semibold"
-                  style={{ color: tipo === t ? (t === 'pagar' ? 'var(--c-danger)' : 'var(--c-success)') : 'var(--c-muted)' }}>
-            <i className={`ti ${icon} text-base`} /> {label}
-          </button>
-        ))}
-      </div>
+      <fieldset disabled={status === 'paid'} style={{ border: 'none', padding: 0, margin: 0, opacity: status === 'paid' ? 0.6 : 1 }}>
+        <div className="relative grid grid-cols-2 bg-border-2 rounded-pill p-1 mb-5">
+          <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-pill bg-bg-elev shadow-1 transition-all duration-300"
+               style={{ left: tipo === 'pagar' ? 4 : 'calc(50%)' }} />
+          {([['pagar', 'A pagar', 'ti-arrow-up-right'], ['receber', 'A receber', 'ti-arrow-down-right']] as const).map(([t, label, icon]) => (
+            <button key={t} type="button" onClick={() => setTipo(t)}
+                    className="relative z-10 h-9 border-none bg-transparent cursor-pointer flex items-center justify-center gap-1.5 text-sm font-semibold"
+                    style={{ color: tipo === t ? (t === 'pagar' ? 'var(--c-danger)' : 'var(--c-success)') : 'var(--c-muted)' }}>
+              <i className={`ti ${icon} text-base`} /> {label}
+            </button>
+          ))}
+        </div>
 
-      <div className="space-y-3">
-        <Field label="Descrição">
-          <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)}
-                 className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
-                 style={{ fontFamily: 'inherit' }} />
-        </Field>
-        <Field label="Valor">
-          <input type="text" value={valor} onChange={(e) => setValor(e.target.value)} inputMode="decimal"
-                 className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
-                 style={{ fontFamily: 'inherit' }} />
-        </Field>
-        <Field label="Vencimento">
-          <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)}
-                 className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
-                 style={{ fontFamily: 'inherit' }} />
-        </Field>
-        {filtered.length > 0 && (
-          <Field label="Categoria">
-            <div className="grid grid-cols-4 gap-1.5">
-              {filtered.map((c) => {
-                const active = catId === c.id;
-                return (
-                  <button key={c.id} onClick={() => setCatId(active ? '' : c.id)}
-                          className="press p-2.5 rounded-md border flex flex-col items-center gap-1 text-[10px] cursor-pointer"
-                          style={{
-                            background: active ? c.color + '15' : 'var(--c-card)',
-                            borderColor: active ? c.color : 'var(--c-border)',
-                            color: active ? c.color : 'var(--c-ink-2)',
-                          }}>
-                    <div className="w-7 h-7 rounded-[8px] grid place-items-center"
-                         style={{ background: c.color + '1F', color: c.color }}>
-                      <i className={`ti ${c.icon} text-sm`} />
-                    </div>
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
+        <div className="space-y-3">
+          <Field label="Descrição">
+            <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)}
+                   className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
+                   style={{ fontFamily: 'inherit' }} />
           </Field>
-        )}
-        <label className="flex items-center gap-2 text-sm cursor-pointer text-muted">
-          <input type="checkbox" checked={recur} onChange={(e) => setRecur(e.target.checked)} />
-          <span>Recorrente (todo mês)</span>
-        </label>
-      </div>
+          <Field label="Valor">
+            <CurrencyInput cents={cents} onChange={setCents}
+                           className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand num" />
+          </Field>
+          <Field label="Vencimento">
+            <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)}
+                   className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
+                   style={{ fontFamily: 'inherit' }} />
+          </Field>
+          {filtered.length > 0 && (
+            <Field label="Categoria">
+              <div className="grid grid-cols-4 gap-1.5">
+                {filtered.map((c) => {
+                  const active = catId === c.id;
+                  return (
+                    <button key={c.id} type="button" onClick={() => setCatId(active ? '' : c.id)}
+                            className="press p-2.5 rounded-md border flex flex-col items-center gap-1 text-[10px] cursor-pointer"
+                            style={{
+                              background: active ? c.color + '15' : 'var(--c-card)',
+                              borderColor: active ? c.color : 'var(--c-border)',
+                              color: active ? c.color : 'var(--c-ink-2)',
+                            }}>
+                      <div className="w-7 h-7 rounded-[8px] grid place-items-center"
+                           style={{ background: c.color + '1F', color: c.color }}>
+                        <i className={`ti ${c.icon} text-sm`} />
+                      </div>
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          )}
+          <label className="flex items-center gap-2 text-sm cursor-pointer text-muted">
+            <input type="checkbox" checked={recur} onChange={(e) => setRecur(e.target.checked)} />
+            <span>Recorrente (todo mês)</span>
+          </label>
+        </div>
 
-      <button onClick={handleSave} disabled={saving}
-              className="press mt-6 w-full py-3.5 rounded-pill text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 border-none cursor-pointer"
-              style={{ background: 'var(--c-brand)', color: 'var(--c-brand-fg)' }}>
-        <i className="ti ti-check" /> {saving ? 'Salvando…' : 'Salvar alterações'}
-      </button>
+        {status !== 'paid' && (
+          <button onClick={handleSave} disabled={saving} type="button"
+                  className="press mt-6 w-full py-3.5 rounded-pill text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 border-none cursor-pointer"
+                  style={{ background: 'var(--c-brand)', color: 'var(--c-brand-fg)' }}>
+            <i className="ti ti-check" /> {saving ? 'Salvando…' : 'Salvar alterações'}
+          </button>
+        )}
+      </fieldset>
 
       <ConfirmDialog
         open={confirmOpen}

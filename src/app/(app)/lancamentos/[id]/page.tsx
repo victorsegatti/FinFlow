@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Category, Transaction } from '@/types/database';
-import { parseBRLInput } from '@/lib/format';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CurrencyInput } from '@/components/currency-input';
 
 export default function EditarLancamentoPage() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function EditarLancamentoPage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
   const [desc, setDesc] = useState('');
-  const [valor, setValor] = useState('');
+  const [cents, setCents] = useState(0);
   const [data, setData] = useState('');
   const [catId, setCatId] = useState<string>('');
   const [recur, setRecur] = useState(false);
@@ -32,7 +32,7 @@ export default function EditarLancamentoPage() {
         const t = tx as Transaction;
         setTipo(t.type as 'receita' | 'despesa');
         setDesc(t.description);
-        setValor(String(Number(t.amount).toFixed(2)).replace('.', ','));
+        setCents(Math.round(Number(t.amount) * 100));
         setData(t.date);
         setCatId(t.category_id || '');
         setRecur(!!t.is_recurring);
@@ -43,11 +43,11 @@ export default function EditarLancamentoPage() {
   }, [params.id]);
 
   async function handleSave() {
-    if (!desc || !valor) return;
+    if (!desc || cents === 0) return;
     setSaving(true);
     const { error } = await supabase.from('transactions').update({
       description: desc,
-      amount: parseBRLInput(valor),
+      amount: cents / 100,
       type: tipo,
       date: data,
       category_id: catId || null,
@@ -120,9 +120,8 @@ export default function EditarLancamentoPage() {
                  style={{ fontFamily: 'inherit' }} />
         </Field>
         <Field label="Valor">
-          <input type="text" value={valor} onChange={(e) => setValor(e.target.value)} inputMode="decimal"
-                 className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
-                 style={{ fontFamily: 'inherit' }} />
+          <CurrencyInput cents={cents} onChange={setCents}
+                         className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand num" />
         </Field>
         <Field label="Data">
           <input type="date" value={data} onChange={(e) => setData(e.target.value)}

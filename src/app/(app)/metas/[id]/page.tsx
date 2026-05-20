@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Category, Goal } from '@/types/database';
-import { parseBRLInput } from '@/lib/format';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CurrencyInput } from '@/components/currency-input';
 
 export default function EditarMetaPage() {
   const router = useRouter();
@@ -14,8 +14,8 @@ export default function EditarMetaPage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [tipo, setTipo] = useState<'budget' | 'savings'>('budget');
   const [nome, setNome] = useState('');
-  const [valor, setValor] = useState('');
-  const [current, setCurrent] = useState('');
+  const [cents, setCents] = useState(0);
+  const [currentCents, setCurrentCents] = useState(0);
   const [catId, setCatId] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -31,8 +31,8 @@ export default function EditarMetaPage() {
         const goal = g as Goal;
         setTipo(goal.type as 'budget' | 'savings');
         setNome(goal.name);
-        setValor(String(Number(goal.target_amount).toFixed(2)).replace('.', ','));
-        setCurrent(String(Number(goal.current_amount || 0).toFixed(2)).replace('.', ','));
+        setCents(Math.round(Number(goal.target_amount) * 100));
+        setCurrentCents(Math.round(Number(goal.current_amount || 0) * 100));
         setCatId(goal.category_id || '');
       }
       setCats((catData || []) as Category[]);
@@ -41,15 +41,15 @@ export default function EditarMetaPage() {
   }, [params.id]);
 
   async function handleSave() {
-    if (!nome || !valor) return;
+    if (!nome || cents === 0) return;
     setSaving(true);
     const payload: any = {
       name: nome,
-      target_amount: parseBRLInput(valor),
+      target_amount: cents / 100,
       type: tipo,
       category_id: catId || null,
     };
-    if (tipo === 'savings') payload.current_amount = parseBRLInput(current || '0');
+    if (tipo === 'savings') payload.current_amount = currentCents / 100;
     const { error } = await supabase.from('goals').update(payload).eq('id', params.id);
     setSaving(false);
     if (error) return alert(error.message);
@@ -107,16 +107,14 @@ export default function EditarMetaPage() {
         </Field>
 
         <Field label={tipo === 'budget' ? 'Limite mensal' : 'Valor alvo'}>
-          <input type="text" value={valor} onChange={(e) => setValor(e.target.value)} inputMode="decimal"
-                 className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
-                 style={{ fontFamily: 'inherit' }} />
+          <CurrencyInput cents={cents} onChange={setCents}
+                         className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand num" />
         </Field>
 
         {tipo === 'savings' && (
           <Field label="Valor acumulado">
-            <input type="text" value={current} onChange={(e) => setCurrent(e.target.value)} inputMode="decimal"
-                   className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand"
-                   style={{ fontFamily: 'inherit' }} />
+            <CurrencyInput cents={currentCents} onChange={setCurrentCents}
+                           className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand num" />
           </Field>
         )}
 

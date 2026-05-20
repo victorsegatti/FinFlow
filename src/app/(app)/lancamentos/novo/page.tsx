@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Category } from '@/types/database';
-import { parseBRLInput, cn } from '@/lib/format';
+import { cn } from '@/lib/format';
 import { format } from 'date-fns';
+import { CurrencyInput } from '@/components/currency-input';
 
 export default function NovoLancamentoPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function NovoLancamentoPage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
   const [desc, setDesc] = useState('');
-  const [valor, setValor] = useState('');
+  const [cents, setCents] = useState(0);
   const [data, setData] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [catId, setCatId] = useState<string>('');
   const [recur, setRecur] = useState(false);
@@ -26,16 +27,15 @@ export default function NovoLancamentoPage() {
   }, [supabase]);
 
   async function handleSave() {
-    if (!desc || !valor) return;
+    if (!desc || cents === 0) return;
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const amount = parseBRLInput(valor);
     const { error } = await supabase.from('transactions').insert({
       user_id: user.id,
       description: desc,
-      amount,
+      amount: cents / 100,
       type: tipo,
       date: data,
       category_id: catId || null,
@@ -87,15 +87,8 @@ export default function NovoLancamentoPage() {
         </Field>
 
         <Field label="Valor">
-          <input
-            type="text"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder="R$ 0,00"
-            inputMode="decimal"
-            className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand transition-colors"
-            style={{ fontFamily: 'inherit' }}
-          />
+          <CurrencyInput cents={cents} onChange={setCents}
+                         className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand transition-colors num" />
         </Field>
 
         <Field label="Data">

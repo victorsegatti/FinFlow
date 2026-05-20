@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Category } from '@/types/database';
-import { parseBRLInput } from '@/lib/format';
+import { CurrencyInput } from '@/components/currency-input';
 
 export default function NovaMetaPage() {
   const router = useRouter();
@@ -11,7 +11,7 @@ export default function NovaMetaPage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [tipo, setTipo] = useState<'budget' | 'savings'>('budget');
   const [nome, setNome] = useState('');
-  const [valor, setValor] = useState('');
+  const [cents, setCents] = useState(0);
   const [catId, setCatId] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -22,7 +22,7 @@ export default function NovaMetaPage() {
   }, []);
 
   async function handleSave() {
-    if (!nome || !valor) return;
+    if (!nome || cents === 0) return;
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
@@ -30,7 +30,7 @@ export default function NovaMetaPage() {
     const { error } = await supabase.from('goals').insert({
       user_id: user.id,
       name: nome,
-      target_amount: parseBRLInput(valor),
+      target_amount: cents / 100,
       type: tipo,
       category_id: catId || null,
       period: 'monthly',
@@ -81,15 +81,8 @@ export default function NovaMetaPage() {
         </Field>
 
         <Field label={tipo === 'budget' ? 'Limite mensal' : 'Valor alvo'}>
-          <input
-            type="text"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder="R$ 0,00"
-            inputMode="decimal"
-            className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand transition-colors"
-            style={{ fontFamily: 'inherit' }}
-          />
+          <CurrencyInput cents={cents} onChange={setCents}
+                         className="w-full h-11 px-3 bg-card border border-border rounded-md text-sm text-ink outline-none focus:border-brand transition-colors num" />
         </Field>
 
         {tipo === 'budget' && filtered.length > 0 && (
