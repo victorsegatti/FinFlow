@@ -16,6 +16,35 @@ export default function ContasPage() {
   const [loading, setLoading] = useState(true);
   const [undoTarget, setUndoTarget] = useState<Bill | null>(null);
   const [undoing, setUndoing] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  function toggleSelected(id: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkDelete() {
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    await supabase.from('bills').delete().in('id', ids);
+    setBulkDeleting(false);
+    setBulkConfirm(false);
+    setSelected(new Set());
+    setSelectMode(false);
+    load();
+    router.refresh();
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected(new Set());
+  }
 
   async function load() {
     const { data } = await supabase.from('bills').select('*').order('due_date');
@@ -86,11 +115,26 @@ export default function ContasPage() {
 
   return (
     <>
-      <div className="ff-enter mb-5">
-        <h1 className="text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}>
-          Contas
-        </h1>
-        <p className="text-xs text-muted mt-0.5">Contas a pagar e receber</p>
+      <div className="ff-enter flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}>
+            Contas
+          </h1>
+          <p className="text-xs text-muted mt-0.5">
+            {selectMode ? `${selected.size} selecionada${selected.size === 1 ? '' : 's'}` : 'Contas a pagar e receber'}
+          </p>
+        </div>
+        {selectMode ? (
+          <button onClick={exitSelectMode}
+                  className="press shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-pill text-xs font-medium border border-border bg-card text-ink-2">
+            Cancelar
+          </button>
+        ) : (
+          <button onClick={() => setSelectMode(true)}
+                  className="press shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-pill text-xs font-medium border border-border bg-card text-ink-2">
+            <i className="ti ti-checkbox text-sm" /> Selecionar
+          </button>
+        )}
       </div>
 
       {/* Tab switcher */}
@@ -147,11 +191,36 @@ export default function ContasPage() {
         <div className="flex flex-col gap-2">
           {list.map((b) => (
             <BillRow key={b.id} bill={b} tab={tab}
+                     selectMode={selectMode}
+                     selected={selected.has(b.id)}
+                     onToggleSelect={() => toggleSelected(b.id)}
                      onPay={() => markPaid(b.id)}
                      onUndo={() => setUndoTarget(b)} />
           ))}
         </div>
       )}
+
+      {selectMode && selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 p-3 pb-6"
+             style={{ background: 'linear-gradient(to top, var(--c-bg) 70%, transparent)' }}>
+          <button onClick={() => setBulkConfirm(true)}
+                  className="press w-full max-w-2xl mx-auto h-12 rounded-pill text-sm font-semibold flex items-center justify-center gap-2 border-none cursor-pointer"
+                  style={{ background: 'var(--c-danger)', color: '#fff' }}>
+            <i className="ti ti-trash" /> Excluir {selected.size} conta{selected.size === 1 ? '' : 's'}
+          </button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={bulkConfirm}
+        title={`Excluir ${selected.size} conta${selected.size === 1 ? '' : 's'}?`}
+        message="Essa ação não pode ser desfeita. As contas selecionadas serão removidas permanentemente."
+        confirmLabel="Excluir"
+        destructive
+        loading={bulkDeleting}
+        onConfirm={bulkDelete}
+        onCancel={() => setBulkConfirm(false)}
+      />
 
       <ConfirmDialog
         open={!!undoTarget}
@@ -168,7 +237,11 @@ export default function ContasPage() {
   );
 }
 
-function BillRow({ bill: b, tab, onPay, onUndo }: { bill: Bill; tab: 'pagar' | 'receber'; onPay: () => void; onUndo: () => void }) {
+function BillRow({ bill: b, tab, onPay, onUndo, selectMode, selected, onToggleSelect }: {
+  bill: Bill; tab: 'pagar' | 'receber';
+  onPay: () => void; onUndo: () => void;
+  selectMode: boolean; selected: boolean; onToggleSelect: () => void;
+}) {
   const router = useRouter();
   const isLate = b.status === 'late';
   const isPaid = b.status === 'paid';
@@ -177,9 +250,21 @@ function BillRow({ bill: b, tab, onPay, onUndo }: { bill: Bill; tab: 'pagar' | '
     <div className={cn(
       'ff-row flex items-center gap-3 p-3.5 rounded-md border',
       isLate ? 'bg-danger-soft border-danger/30' : 'bg-card border-border',
-      isPaid && 'opacity-50'
-    )}>
-      <button onClick={() => router.push(`/contas/${b.id}`)}
+      isPaid && !selectMode && 'opacity-50',
+    )}
+    style={selected ? { borderColor: 'var(--c-brand)', background: 'var(--c-brand-soft)' } : undefined}>
+      {selectMode && (
+        <button onClick={onToggleSelect}
+                aria-label="Selecionar"
+                className="press w-5 h-5 rounded grid place-items-center shrink-0 border-none cursor-pointer"
+                style={{
+                  background: selected ? 'var(--c-brand)' : 'transparent',
+                  border: selected ? 'none' : '1.5px solid var(--c-border)',
+                }}>
+          {selected && <i className="ti ti-check text-xs" style={{ color: 'var(--c-brand-fg)' }} />}
+        </button>
+      )}
+      <button onClick={() => selectMode ? onToggleSelect() : router.push(`/contas/${b.id}`)}
               className="press flex items-center gap-3 flex-1 min-w-0 bg-transparent border-none p-0 cursor-pointer text-left">
         <div className="w-[38px] h-[38px] rounded-xl grid place-items-center shrink-0"
              style={{ background: isLate ? 'var(--c-danger-soft)' : 'var(--c-brand-soft)', color: isLate ? 'var(--c-danger)' : 'var(--c-brand)' }}>
@@ -200,7 +285,11 @@ function BillRow({ bill: b, tab, onPay, onUndo }: { bill: Bill; tab: 'pagar' | '
           </p>
         </div>
       </button>
-      {!isPaid ? (
+      {selectMode ? (
+        <div className="num text-[13px] font-semibold text-ink shrink-0" style={{ letterSpacing: '-0.02em' }}>
+          {fmtBRL(Number(b.amount))}
+        </div>
+      ) : !isPaid ? (
         <button
           onClick={onPay}
           className="press shrink-0 text-xs px-3 py-2 border border-border rounded-md font-medium text-ink bg-card"
