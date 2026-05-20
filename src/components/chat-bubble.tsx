@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -127,14 +129,17 @@ export function ChatBubble() {
               )}
               {messages.map((m, i) => (
                 <div key={i} className="flex" style={{ justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                  <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
+                  <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ai-md"
                        style={{
                          background: m.role === 'user' ? 'var(--c-brand)' : 'var(--c-card)',
                          color: m.role === 'user' ? 'var(--c-brand-fg)' : 'var(--c-ink)',
                          border: m.role === 'user' ? 'none' : '1px solid var(--c-border)',
-                         whiteSpace: 'pre-wrap',
                        }}>
-                    {m.content || (streaming && i === messages.length - 1 ? (
+                    {m.content ? (
+                      m.role === 'user'
+                        ? <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
+                        : <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                    ) : (streaming && i === messages.length - 1 ? (
                       <span className="inline-flex gap-1">
                         <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--c-muted)' }} />
                         <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--c-muted)', animationDelay: '0.15s' }} />

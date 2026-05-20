@@ -92,4 +92,13 @@
 
   @keyframes ff-backdrop { from { opacity: 0; } to { opacity: 1; } }
   .ff-backdrop { animation: ff-backdrop .24s ease both; }
+
+  .ai-md p { margin: 0 0 0.5em; }
+  .ai-md p:last-child { margin-bottom: 0; }
+  .ai-md strong { font-weight: 600; color: var(--c-ink); }
+  .ai-md em { font-style: italic; }
+  .ai-md ul, .ai-md ol { margin: 0.4em 0; padding-left: 1.2em; }
+  .ai-md li { margin: 0.15em 0; }
+  .ai-md code { background: var(--c-border-2); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; font-family: ui-monospace, monospace; }
+  .ai-md h1, .ai-md h2, .ai-md h3 { font-family: var(--font-display); font-weight: 600; margin: 0.5em 0 0.25em; font-size: 1em; }
 }
