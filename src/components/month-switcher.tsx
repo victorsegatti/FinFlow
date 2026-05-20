@@ -1,14 +1,27 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { format, addMonths, subMonths } from 'date-fns';
+import { format, addMonths, subMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export function MonthSwitcher({ month }: { month: Date }) {
-  const pathname = usePathname();
-  const prev = subMonths(month, 1);
-  const next = addMonths(month, 1);
-  const label = format(month, "MMMM 'de' yyyy", { locale: ptBR });
+type Props = { month: Date | string };
+
+function toDate(m: Date | string): Date {
+  if (m instanceof Date) return m;
+  // accept 'yyyy-MM' or 'yyyy-MM-dd' or full ISO
+  if (/^\d{4}-\d{2}$/.test(m)) {
+    const [y, mm] = m.split('-').map(Number);
+    return new Date(y, mm - 1, 1);
+  }
+  return parseISO(m);
+}
+
+export function MonthSwitcher({ month }: Props) {
+  const pathname = usePathname() || '/dashboard';
+  const m = toDate(month);
+  const prev = subMonths(m, 1);
+  const next = addMonths(m, 1);
+  const label = format(m, "MMMM 'de' yyyy", { locale: ptBR });
 
   return (
     <div className="ff-enter flex items-center justify-center gap-2 mb-3">
@@ -17,7 +30,7 @@ export function MonthSwitcher({ month }: { month: Date }) {
             className="press w-9 h-9 rounded-full grid place-items-center bg-card border border-border text-ink-2 no-underline">
         <i className="ti ti-chevron-left text-sm" />
       </Link>
-      <Link href={pathname} replace
+      <Link href={pathname}
             className="flex-1 text-center text-sm font-medium text-ink capitalize no-underline"
             style={{ color: 'var(--c-ink)' }}>
         {label}

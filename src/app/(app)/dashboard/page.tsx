@@ -82,7 +82,7 @@ export default async function DashboardPage({
     <div style={{ padding: '8px 0 140px' }}>
       <TopHeader title={`Olá, ${firstName}`} subtitle={subtitle} />
 
-      <MonthSwitcher month={viewMonth} />
+      <MonthSwitcher month={format(viewMonth, 'yyyy-MM')} />
 
       <BigBalanceCard value={saldo} deltaPct={deltaPct} />
 
