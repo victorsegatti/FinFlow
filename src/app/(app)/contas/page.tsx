@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Bill } from '@/types/database';
 import { fmtBRL, fmtDate, cn } from '@/lib/format';
@@ -165,6 +166,7 @@ export default function ContasPage() {
 }
 
 function BillRow({ bill: b, tab, onPay, onUndo }: { bill: Bill; tab: 'pagar' | 'receber'; onPay: () => void; onUndo: () => void }) {
+  const router = useRouter();
   const isLate = b.status === 'late';
   const isPaid = b.status === 'paid';
 
@@ -174,24 +176,27 @@ function BillRow({ bill: b, tab, onPay, onUndo }: { bill: Bill; tab: 'pagar' | '
       isLate ? 'bg-danger-soft border-danger/30' : 'bg-card border-border',
       isPaid && 'opacity-50'
     )}>
-      <div className="w-[38px] h-[38px] rounded-xl grid place-items-center shrink-0"
-           style={{ background: isLate ? 'var(--c-danger-soft)' : 'var(--c-brand-soft)', color: isLate ? 'var(--c-danger)' : 'var(--c-brand)' }}>
-        <i className={`ti ${isPaid ? 'ti-check' : isLate ? 'ti-alert-circle' : 'ti-receipt-2'} text-lg`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-ink flex items-center gap-1.5 truncate">
-          {b.description}
-          {b.is_recurring && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0"
-                  style={{ background: 'var(--c-brand-soft)', color: 'var(--c-brand)' }}>
-              recorrente
-            </span>
-          )}
-        </p>
-        <p className={cn('text-[11px] mt-0.5', isLate ? 'text-danger' : 'text-muted')}>
-          {isPaid ? 'Pago' : isLate ? `Atrasado · venceu ${fmtDate(b.due_date)}` : `Vence em ${fmtDate(b.due_date)}`}
-        </p>
-      </div>
+      <button onClick={() => router.push(`/contas/${b.id}`)}
+              className="press flex items-center gap-3 flex-1 min-w-0 bg-transparent border-none p-0 cursor-pointer text-left">
+        <div className="w-[38px] h-[38px] rounded-xl grid place-items-center shrink-0"
+             style={{ background: isLate ? 'var(--c-danger-soft)' : 'var(--c-brand-soft)', color: isLate ? 'var(--c-danger)' : 'var(--c-brand)' }}>
+          <i className={`ti ${isPaid ? 'ti-check' : isLate ? 'ti-alert-circle' : 'ti-receipt-2'} text-lg`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-ink flex items-center gap-1.5 truncate">
+            {b.description}
+            {b.is_recurring && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                    style={{ background: 'var(--c-brand-soft)', color: 'var(--c-brand)' }}>
+                recorrente
+              </span>
+            )}
+          </p>
+          <p className={cn('text-[11px] mt-0.5', isLate ? 'text-danger' : 'text-muted')}>
+            {isPaid ? 'Pago' : isLate ? `Atrasado · venceu ${fmtDate(b.due_date)}` : `Vence em ${fmtDate(b.due_date)}`}
+          </p>
+        </div>
+      </button>
       {!isPaid ? (
         <button
           onClick={onPay}
