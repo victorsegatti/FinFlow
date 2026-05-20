@@ -1,15 +1,21 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Bill } from '@/types/database';
 import { fmtBRL, fmtDate, cn } from '@/lib/format';
 import { MetricCard } from '@/components/metric-card';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { MonthSwitcher, parseMonthParam } from '@/components/month-switcher';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 export default function ContasPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { viewMonth } = parseMonthParam(searchParams.get('month'));
+  const monthStart = format(startOfMonth(viewMonth), 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(viewMonth), 'yyyy-MM-dd');
   const supabase = createClient();
   const [bills, setBills] = useState<Bill[]>([]);
   const [tab, setTab] = useState<'pagar' | 'receber'>('pagar');
@@ -47,12 +53,15 @@ export default function ContasPage() {
   }
 
   async function load() {
-    const { data } = await supabase.from('bills').select('*').order('due_date');
+    setLoading(true);
+    const { data } = await supabase.from('bills').select('*')
+      .gte('due_date', monthStart).lte('due_date', monthEnd)
+      .order('due_date');
     setBills((data || []) as Bill[]);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [monthStart, monthEnd]);
 
   async function markPaid(id: string) {
     const bill = bills.find((b) => b.id === id);
@@ -136,6 +145,8 @@ export default function ContasPage() {
           </button>
         )}
       </div>
+
+      <MonthSwitcher month={viewMonth} />
 
       {/* Tab switcher */}
       <div className="relative grid grid-cols-2 bg-border-2 rounded-pill p-1 mb-4">

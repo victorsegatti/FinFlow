@@ -1,16 +1,23 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { TxRow, DateGroup } from '@/components/tx-row';
 import { MetricCard } from '@/components/metric-card';
+import { MonthSwitcher, parseMonthParam } from '@/components/month-switcher';
 import { Transaction, Category } from '@/types/database';
 import { cn, fmtBRL } from '@/lib/format';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function LancamentosPage() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const { viewMonth } = parseMonthParam(searchParams.get('month'));
+  const monthStart = format(startOfMonth(viewMonth), 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(viewMonth), 'yyyy-MM-dd');
+
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
   const [q, setQ] = useState('');
@@ -18,16 +25,19 @@ export default function LancamentosPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     (async () => {
       const [{ data: t }, { data: c }] = await Promise.all([
-        supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false }).limit(100),
+        supabase.from('transactions').select('*, category:categories(*)')
+          .gte('date', monthStart).lte('date', monthEnd)
+          .order('date', { ascending: false }),
         supabase.from('categories').select('*'),
       ]);
       setTxs((t || []) as Transaction[]);
       setCats((c || []) as Category[]);
       setLoading(false);
     })();
-  }, [supabase]);
+  }, [supabase, monthStart, monthEnd]);
 
   const filtered = txs.filter((t) => {
     const okCat = filterCat === 'todos' || t.category_id === filterCat;
@@ -69,6 +79,8 @@ export default function LancamentosPage() {
           <i className="ti ti-upload text-sm" /> Importar
         </Link>
       </div>
+
+      <MonthSwitcher month={viewMonth} />
 
       <div className="relative mb-3">
         <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
