@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Category, Transaction } from '@/types/database';
 import { parseBRLInput } from '@/lib/format';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 export default function EditarLancamentoPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function EditarLancamentoPage() {
   const [recur, setRecur] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -58,10 +60,10 @@ export default function EditarLancamentoPage() {
   }
 
   async function handleDelete() {
-    if (!confirm('Excluir esse lançamento?')) return;
     setDeleting(true);
     const { error } = await supabase.from('transactions').delete().eq('id', params.id);
     setDeleting(false);
+    setConfirmOpen(false);
     if (error) return alert(error.message);
     router.push('/lancamentos');
     router.refresh();
@@ -80,13 +82,24 @@ export default function EditarLancamentoPage() {
         <h1 className="flex-1 text-xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
           Editar lançamento
         </h1>
-        <button onClick={handleDelete} disabled={deleting}
+        <button onClick={() => setConfirmOpen(true)} disabled={deleting}
                 className="press w-9 h-9 rounded-full grid place-items-center border-none cursor-pointer disabled:opacity-40"
                 style={{ background: 'var(--c-danger-soft)', color: 'var(--c-danger)' }}
                 aria-label="Excluir">
           <i className="ti ti-trash text-sm" />
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Excluir lançamento?"
+        message="Essa ação não pode ser desfeita. O lançamento será removido permanentemente."
+        confirmLabel="Excluir"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       <div className="relative grid grid-cols-2 bg-border-2 rounded-pill p-1 mb-5">
         <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-pill bg-bg-elev shadow-1 transition-all duration-300"

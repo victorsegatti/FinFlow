@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Category, Goal } from '@/types/database';
 import { parseBRLInput } from '@/lib/format';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 export default function EditarMetaPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function EditarMetaPage() {
   const [catId, setCatId] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -56,10 +58,10 @@ export default function EditarMetaPage() {
   }
 
   async function handleDelete() {
-    if (!confirm('Excluir essa meta?')) return;
     setDeleting(true);
     const { error } = await supabase.from('goals').delete().eq('id', params.id);
     setDeleting(false);
+    setConfirmOpen(false);
     if (error) return alert(error.message);
     router.push('/metas');
     router.refresh();
@@ -78,13 +80,24 @@ export default function EditarMetaPage() {
         <h1 className="flex-1 text-xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
           Editar meta
         </h1>
-        <button onClick={handleDelete} disabled={deleting}
+        <button onClick={() => setConfirmOpen(true)} disabled={deleting}
                 className="press w-9 h-9 rounded-full grid place-items-center border-none cursor-pointer disabled:opacity-40"
                 style={{ background: 'var(--c-danger-soft)', color: 'var(--c-danger)' }}
                 aria-label="Excluir">
           <i className="ti ti-trash text-sm" />
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Excluir meta?"
+        message="Essa ação não pode ser desfeita. A meta será removida permanentemente."
+        confirmLabel="Excluir"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       <div className="space-y-3">
         <Field label="Nome da meta">
