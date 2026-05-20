@@ -3,6 +3,7 @@ import { TxRow } from '@/components/tx-row';
 import { MetricCard, BigBalanceCard } from '@/components/metric-card';
 import { TopHeader } from '@/components/top-header';
 import { AIInsightCard } from '@/components/ai-insight-card';
+import { PrevistoRealizado } from '@/components/previsto-realizado';
 import { Transaction, Bill } from '@/types/database';
 import Link from 'next/link';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
   const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
   const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
 
-  const [{ data: { user } }, { data: txs }, { data: bills }] = await Promise.all([
+  const [{ data: { user } }, { data: txs }, { data: bills }, { data: monthBills }] = await Promise.all([
     supabase.auth.getUser(),
     supabase
       .from('transactions')
@@ -28,6 +29,11 @@ export default async function DashboardPage() {
       .from('bills')
       .select('*')
       .neq('status', 'paid'),
+    supabase
+      .from('bills')
+      .select('amount, type')
+      .gte('due_date', monthStart)
+      .lte('due_date', monthEnd),
   ]);
 
   const userName = user?.email?.split('@')[0] || 'usuário';
@@ -49,6 +55,10 @@ export default async function DashboardPage() {
     .filter((b) => b.status === 'late' || b.status === 'pending')
     .reduce((s, b) => s + Number(b.amount), 0);
 
+  const monthBs = (monthBills || []) as Pick<Bill, 'amount' | 'type'>[];
+  const despPrev = monthBs.filter((b) => b.type === 'pagar').reduce((s, b) => s + Number(b.amount), 0);
+  const recPrev = monthBs.filter((b) => b.type === 'receber').reduce((s, b) => s + Number(b.amount), 0);
+
   const recent = transactions.slice(0, 10);
 
   const subtitle = format(now, "EEEE, dd 'de' MMMM", { locale: ptBR });
@@ -60,6 +70,8 @@ export default async function DashboardPage() {
       <BigBalanceCard value={saldo} deltaPct={deltaPct} />
 
       <AIInsightCard />
+
+      <PrevistoRealizado despPrev={despPrev} despReal={despesas} recPrev={recPrev} recReal={receitas} />
 
       {/* metric cards */}
       <div className="grid grid-cols-2 gap-2.5 mt-3.5">
