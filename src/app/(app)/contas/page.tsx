@@ -201,11 +201,11 @@ export default function ContasPage() {
       )}
 
       {selectMode && selected.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 p-3 pb-6"
-             style={{ background: 'linear-gradient(to top, var(--c-bg) 70%, transparent)' }}>
+        <div className="fixed inset-x-0 z-40 px-3 lg:left-56"
+             style={{ bottom: 100 }}>
           <button onClick={() => setBulkConfirm(true)}
-                  className="press w-full max-w-2xl mx-auto h-12 rounded-pill text-sm font-semibold flex items-center justify-center gap-2 border-none cursor-pointer"
-                  style={{ background: 'var(--c-danger)', color: '#fff' }}>
+                  className="press w-full max-w-2xl mx-auto h-12 rounded-pill text-sm font-semibold flex items-center justify-center gap-2 border-none cursor-pointer shadow-3"
+                  style={{ background: 'var(--c-danger)', color: '#fff', boxShadow: '0 12px 32px -8px rgba(0,0,0,0.35)' }}>
             <i className="ti ti-trash" /> Excluir {selected.size} conta{selected.size === 1 ? '' : 's'}
           </button>
         </div>
