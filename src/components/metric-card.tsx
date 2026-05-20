@@ -1,3 +1,5 @@
+'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fmtBRL } from '@/lib/format';
 
@@ -42,6 +44,18 @@ export function MetricCard({ label, value, icon, tone = 'success', deltaPct, for
 export function BigBalanceCard({ value, weekly, onAction, deltaPct }: {
   value: number; weekly?: number[]; onAction?: () => void; deltaPct?: number;
 }) {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('finflow:balance-hidden') : null;
+    if (stored === '1') setHidden(true);
+  }, []);
+  const toggle = () => {
+    setHidden((h) => {
+      const next = !h;
+      try { window.localStorage.setItem('finflow:balance-hidden', next ? '1' : '0'); } catch {}
+      return next;
+    });
+  };
   const data = weekly ?? [0, 0, 0, 0, 0, 0, value];
   const w = 240, h = 56, pad = 4;
   const min = Math.min(...data), max = Math.max(...data);
@@ -62,15 +76,16 @@ export function BigBalanceCard({ value, weekly, onAction, deltaPct }: {
 
       <div className="relative flex items-center justify-between mb-2">
         <span className="text-[11px] uppercase tracking-widest opacity-70 font-medium">Saldo do mês</span>
-        <button className="press w-8 h-8 rounded-full grid place-items-center"
-                style={{ background: 'rgba(255,255,255,0.1)' }} aria-label="Detalhes">
-          <i className="ti ti-eye text-sm" />
+        <button onClick={toggle} className="press w-8 h-8 rounded-full grid place-items-center border-none cursor-pointer"
+                style={{ background: 'rgba(255,255,255,0.1)', color: 'inherit' }}
+                aria-label={hidden ? 'Mostrar saldo' : 'Ocultar saldo'}>
+          <i className={`ti ${hidden ? 'ti-eye-off' : 'ti-eye'} text-sm`} />
         </button>
       </div>
 
       <div className="relative num text-[44px] font-semibold leading-none"
            style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.04em' }}>
-        {fmtBRL(value)}
+        {hidden ? 'R$ ••••••' : fmtBRL(value)}
       </div>
 
       {deltaPct !== undefined && (

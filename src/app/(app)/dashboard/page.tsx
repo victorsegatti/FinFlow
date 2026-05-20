@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     .filter((b) => b.status === 'late' || b.status === 'pending')
     .reduce((s, b) => s + Number(b.amount), 0);
 
-  const recent = transactions.slice(0, 5);
+  const recent = transactions.slice(0, 10);
 
   const subtitle = format(now, "EEEE, dd 'de' MMMM", { locale: ptBR });
 
