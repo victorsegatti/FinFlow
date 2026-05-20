@@ -53,16 +53,17 @@ export default async function MetasPage() {
             const spent = g.category_id ? spentByCat[g.category_id] || 0 : 0;
             const pct = Math.min(100, Math.round((spent / Number(g.target_amount)) * 100));
             return (
-              <GoalBar
-                key={g.id}
-                name={g.name}
-                icon={g.category?.icon || 'ti-target'}
-                color={g.category?.color || 'var(--c-brand)'}
-                spent={spent}
-                target={Number(g.target_amount)}
-                pct={pct}
-                over={spent > Number(g.target_amount)}
-              />
+              <Link key={g.id} href={`/metas/${g.id}`} className="no-underline" style={{ color: 'inherit' }}>
+                <GoalBar
+                  name={g.name}
+                  icon={g.category?.icon || 'ti-target'}
+                  color={g.category?.color || 'var(--c-brand)'}
+                  spent={spent}
+                  target={Number(g.target_amount)}
+                  pct={pct}
+                  over={spent > Number(g.target_amount)}
+                />
+              </Link>
             );
           })}
         </div>
@@ -76,17 +77,18 @@ export default async function MetasPage() {
           {savings.map((g) => {
             const pct = Math.min(100, Math.round((Number(g.current_amount) / Number(g.target_amount)) * 100));
             return (
-              <GoalBar
-                key={g.id}
-                name={g.name}
-                icon={g.category?.icon || 'ti-pig-money'}
-                color={g.category?.color || 'var(--c-brand)'}
-                spent={Number(g.current_amount)}
-                target={Number(g.target_amount)}
-                pct={pct}
-                over={false}
-                savings
-              />
+              <Link key={g.id} href={`/metas/${g.id}`} className="no-underline" style={{ color: 'inherit' }}>
+                <GoalBar
+                  name={g.name}
+                  icon={g.category?.icon || 'ti-pig-money'}
+                  color={g.category?.color || 'var(--c-brand)'}
+                  spent={Number(g.current_amount)}
+                  target={Number(g.target_amount)}
+                  pct={pct}
+                  over={false}
+                  savings
+                />
+              </Link>
             );
           })}
         </div>

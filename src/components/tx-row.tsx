@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Transaction } from '@/types/database';
 import { fmtBRL, fmtDate } from '@/lib/format';
 
@@ -7,8 +8,9 @@ export function TxRow({ tx, index = 0 }: { tx: Transaction; index?: number }) {
   const isIncome = tx.type === 'receita';
 
   return (
-    <div className="ff-row bg-card border border-border rounded-md flex items-center gap-3 p-3.5 cursor-pointer"
-         style={{ animationDelay: `${index * 30}ms` }}>
+    <Link href={`/lancamentos/${tx.id}`}
+          className="ff-row press bg-card border border-border rounded-md flex items-center gap-3 p-3.5 cursor-pointer no-underline"
+          style={{ animationDelay: `${index * 30}ms`, color: 'inherit' }}>
       <div className="w-[38px] h-[38px] rounded-xl grid place-items-center shrink-0"
            style={{ background: tone + '1A', color: tone }}>
         <i className={`ti ${cat?.icon || 'ti-tag'} text-lg`} />
@@ -26,7 +28,7 @@ export function TxRow({ tx, index = 0 }: { tx: Transaction; index?: number }) {
            style={{ color: isIncome ? 'var(--c-success)' : 'var(--c-ink)', letterSpacing: '-0.02em' }}>
         {isIncome ? '+' : '−'}{fmtBRL(tx.amount)}
       </div>
-    </div>
+    </Link>
   );
 }
 
