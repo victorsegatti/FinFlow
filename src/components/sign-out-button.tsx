@@ -12,6 +12,12 @@ export function SignOutButton({
 
   async function signOut() {
     setLoading(true);
+    // Limpar caches locais do app (insight da IA, etc) pra não vazar pra próxima sessão
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('finflow:'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {}
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();

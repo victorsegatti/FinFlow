@@ -1,16 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
-const CACHE_KEY = 'finflow:ai-insight';
 type Cached = { date: string; insight: string };
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10); // yyyy-mm-dd
+  return new Date().toISOString().slice(0, 10);
 }
 
-function readCache(): Cached | null {
+function keyFor(userId: string) {
+  return `finflow:ai-insight:${userId}`;
+}
+
+function readCache(userId: string): Cached | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(keyFor(userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Cached;
     if (parsed.date !== today()) return null;
@@ -20,28 +24,28 @@ function readCache(): Cached | null {
   }
 }
 
-function writeCache(insight: string) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ date: today(), insight })); } catch {}
+function writeCache(userId: string, insight: string) {
+  try { localStorage.setItem(keyFor(userId), JSON.stringify({ date: today(), insight })); } catch {}
 }
 
-function clearCache() {
-  try { localStorage.removeItem(CACHE_KEY); } catch {}
+function clearCache(userId: string) {
+  try { localStorage.removeItem(keyFor(userId)); } catch {}
 }
 
 export function AIInsightCard() {
+  const supabase = createClient();
+  const [userId, setUserId] = useState<string | null>(null);
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [fromCache, setFromCache] = useState(false);
 
-  async function load(force = false) {
+  async function load(uid: string, force = false) {
     setLoading(true);
     setErr(null);
     if (!force) {
-      const cached = readCache();
+      const cached = readCache(uid);
       if (cached) {
         setInsight(cached.insight);
-        setFromCache(true);
         setLoading(false);
         return;
       }
@@ -51,8 +55,7 @@ export function AIInsightCard() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || 'erro');
       setInsight(j.insight);
-      setFromCache(false);
-      writeCache(j.insight);
+      writeCache(uid, j.insight);
     } catch (e: any) {
       setErr(e?.message || 'erro');
     } finally {
@@ -60,7 +63,14 @@ export function AIInsightCard() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      setUserId(user.id);
+      load(user.id);
+    })();
+  }, []);
 
   if (err) return null;
 
@@ -76,8 +86,8 @@ export function AIInsightCard() {
           <div className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--c-brand)' }}>
             Insight do dia
           </div>
-          {!loading && insight && (
-            <button onClick={() => { clearCache(); load(true); }}
+          {!loading && insight && userId && (
+            <button onClick={() => { clearCache(userId); load(userId, true); }}
                     aria-label="Atualizar insight"
                     className="press w-6 h-6 rounded-full grid place-items-center border-none cursor-pointer"
                     style={{ background: 'transparent', color: 'var(--c-brand)' }}>
