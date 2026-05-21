@@ -7,7 +7,7 @@ import { PrevistoRealizado } from '@/components/previsto-realizado';
 import { MonthSwitcher } from '@/components/month-switcher';
 import { Transaction, Bill } from '@/types/database';
 import Link from 'next/link';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,9 @@ export default async function DashboardPage({
   const monthEnd = format(endOfMonth(viewMonth), 'yyyy-MM-dd');
   const isCurrentMonth = format(viewMonth, 'yyyy-MM') === format(now, 'yyyy-MM');
 
-  const [{ data: { user } }, { data: txs }, { data: bills }, { data: monthBills }] = await Promise.all([
+  const prevMonthEnd = format(endOfMonth(subMonths(viewMonth, 1)), 'yyyy-MM-dd');
+
+  const [{ data: { user } }, { data: txs }, { data: bills }, { data: monthBills }, { data: prevTxs }] = await Promise.all([
     supabase.auth.getUser(),
     supabase
       .from('transactions')
@@ -47,6 +49,11 @@ export default async function DashboardPage({
       .select('amount, type')
       .gte('due_date', monthStart)
       .lte('due_date', monthEnd),
+    // Saldo acumulado até o último dia do mês anterior
+    supabase
+      .from('transactions')
+      .select('amount, type')
+      .lte('date', prevMonthEnd),
   ]);
 
   const userName = user?.email?.split('@')[0] || 'usuário';
@@ -72,6 +79,13 @@ export default async function DashboardPage({
   const despPrev = monthBs.filter((b) => b.type === 'pagar').reduce((s, b) => s + Number(b.amount), 0);
   const recPrev = monthBs.filter((b) => b.type === 'receber').reduce((s, b) => s + Number(b.amount), 0);
 
+  // Saldo acumulado de todos os lançamentos até o fim do mês anterior
+  const prevTxList = (prevTxs || []) as Pick<Transaction, 'amount' | 'type'>[];
+  const saldoAcumuladoAnterior = prevTxList.reduce(
+    (s, t) => s + (t.type === 'receita' ? Number(t.amount) : -Number(t.amount)),
+    0,
+  );
+
   const recent = transactions.slice(0, 10);
 
   const subtitle = isCurrentMonth
@@ -88,7 +102,8 @@ export default async function DashboardPage({
 
       {isCurrentMonth && <AIInsightCard />}
 
-      <PrevistoRealizado despPrev={despPrev} despReal={despesas} recPrev={recPrev} recReal={receitas} />
+      <PrevistoRealizado despPrev={despPrev} despReal={despesas} recPrev={recPrev} recReal={receitas}
+                         saldoAcumuladoAnterior={saldoAcumuladoAnterior} />
 
       {/* metric cards */}
       <div className="grid grid-cols-2 gap-2.5 mt-3.5">

@@ -1,15 +1,17 @@
 import { fmtBRL } from '@/lib/format';
 
 export function PrevistoRealizado({
-  despPrev, despReal, recPrev, recReal,
+  despPrev, despReal, recPrev, recReal, saldoAcumuladoAnterior = 0,
 }: {
   despPrev: number; despReal: number; recPrev: number; recReal: number;
+  saldoAcumuladoAnterior?: number;
 }) {
   if (despPrev === 0 && recPrev === 0) return null;
 
   const saldoPrev = recPrev - despPrev;
   const saldoReal = recReal - despReal;
   const saldoDiff = saldoReal - saldoPrev;
+  const saldoPrevComAcum = saldoPrev + saldoAcumuladoAnterior;
 
   return (
     <div className="ff-enter mt-4 bg-card border border-border rounded-md p-4">
@@ -25,7 +27,25 @@ export function PrevistoRealizado({
             {saldoPrev >= 0 ? '+' : '−'}{fmtBRL(Math.abs(saldoPrev))}
           </span>
         </div>
-        <div className="flex items-baseline justify-between text-[11px]">
+        {saldoAcumuladoAnterior !== 0 && (
+          <div className="flex items-baseline justify-between text-[11px] mb-1">
+            <span className="text-muted">Acumulado do mês anterior</span>
+            <span className="num font-medium"
+                  style={{ color: saldoAcumuladoAnterior >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>
+              {saldoAcumuladoAnterior >= 0 ? '+' : '−'}{fmtBRL(Math.abs(saldoAcumuladoAnterior))}
+            </span>
+          </div>
+        )}
+        {saldoAcumuladoAnterior !== 0 && (
+          <div className="flex items-baseline justify-between text-[12px] font-medium mb-1">
+            <span className="text-ink-2">= Previsto + acumulado</span>
+            <span className="num"
+                  style={{ color: saldoPrevComAcum >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>
+              {saldoPrevComAcum >= 0 ? '+' : '−'}{fmtBRL(Math.abs(saldoPrevComAcum))}
+            </span>
+          </div>
+        )}
+        <div className="flex items-baseline justify-between text-[11px] mt-1">
           <span className="text-muted num">
             Realizado: <span style={{ color: saldoReal >= 0 ? 'var(--c-success)' : 'var(--c-danger)', fontWeight: 600 }}>
               {saldoReal >= 0 ? '+' : '−'}{fmtBRL(Math.abs(saldoReal))}
