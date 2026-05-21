@@ -32,7 +32,7 @@ export default async function DashboardPage({
 
   const prevMonthEnd = format(endOfMonth(subMonths(viewMonth, 1)), 'yyyy-MM-dd');
 
-  const [{ data: { user } }, { data: txs }, { data: bills }, { data: monthBills }, { data: prevTxs }] = await Promise.all([
+  const [{ data: { user } }, { data: txs }, { data: bills }, { data: monthBills }, { data: prevBills }] = await Promise.all([
     supabase.auth.getUser(),
     supabase
       .from('transactions')
@@ -49,11 +49,11 @@ export default async function DashboardPage({
       .select('amount, type')
       .gte('due_date', monthStart)
       .lte('due_date', monthEnd),
-    // Saldo acumulado até o último dia do mês anterior
+    // Saldo previsto acumulado: todas as contas com vencimento até o fim do mês anterior
     supabase
-      .from('transactions')
+      .from('bills')
       .select('amount, type')
-      .lte('date', prevMonthEnd),
+      .lte('due_date', prevMonthEnd),
   ]);
 
   const userName = user?.email?.split('@')[0] || 'usuário';
@@ -79,10 +79,10 @@ export default async function DashboardPage({
   const despPrev = monthBs.filter((b) => b.type === 'pagar').reduce((s, b) => s + Number(b.amount), 0);
   const recPrev = monthBs.filter((b) => b.type === 'receber').reduce((s, b) => s + Number(b.amount), 0);
 
-  // Saldo acumulado de todos os lançamentos até o fim do mês anterior
-  const prevTxList = (prevTxs || []) as Pick<Transaction, 'amount' | 'type'>[];
-  const saldoAcumuladoAnterior = prevTxList.reduce(
-    (s, t) => s + (t.type === 'receita' ? Number(t.amount) : -Number(t.amount)),
+  // Saldo PREVISTO acumulado: soma de todas as contas (receber − pagar) com vencimento até o fim do mês anterior
+  const prevBillsList = (prevBills || []) as Pick<Bill, 'amount' | 'type'>[];
+  const saldoAcumuladoAnterior = prevBillsList.reduce(
+    (s, b) => s + (b.type === 'receber' ? Number(b.amount) : -Number(b.amount)),
     0,
   );
 
